@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduGenie - AI Learning Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>EduGenie</h1>
+        <p class="subtitle">
+            Your AI-powered learning assistant
+        </p>
+        <div class="card">
+            <label for="task">Choose a learning task</label>
+            <select id="task">
+                <option value="explain">Explain</option>
+                <option value="qa">QnA</option>
+                <option value="quiz">Quiz</option>
+                <option value="summarize">Summary</option>
+                <option value="learn">Recommend Path</option>
+            </select>
+            <label for="inputText">Enter your topic or text</label>
+            <textarea
+                id="inputText"
+                placeholder="Example: Explain photosynthesis in simple words..."
+            ></textarea>
+            <button onclick="submitTask()">
+                Generate
+            </button>
+            <div id="loading" class="loading">
+                Processing...
+            </div>
+            <div id="result" class="result">
+                Your result will appear here.
+            </div>
+        </div>
+    </div>
+    <script>
+        const placeholders = {
+            explain: "Example: Explain photosynthesis in simple words...",
+            qa: "Example: What is the difference between a compiler and an interpreter?",
+            quiz: "Example: Paste a paragraph about the Solar System to generate multiple-choice questions...",
+            summarize: "Example: Paste an article or study notes to get a concise summary...",
+            learn: "Example: Machine Learning for beginners, Web Development with FastAPI..."
+        };
+
+        const taskSelect = document.getElementById("task");
+        const inputTextArea = document.getElementById("inputText");
+
+        taskSelect.addEventListener("change", () => {
+            inputTextArea.placeholder = placeholders[taskSelect.value] || "Enter your topic or text...";
+        });
+
+        async function submitTask() {
+            const task = taskSelect.value;
+            const inputText = inputTextArea.value;
+            const result = document.getElementById("result");
+            const loading = document.getElementById("loading");
+            const btn = document.querySelector("button");
+
+            if (!inputText.trim()) {
+                result.innerText = "Please enter a topic or text.";
+                return;
+            }
+
+            loading.style.display = "block";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            btn.style.cursor = "not-allowed";
+            result.innerText = "";
+
+            let endpoint = "";
+            if (task === "explain") {
+                endpoint = "/explain";
+            } else if (task === "qa") {
+                endpoint = "/qa";
+            } else if (task === "quiz") {
+                endpoint = "/quiz";
+            } else if (task === "summarize") {
+                endpoint = "/summarize";
+            } else if (task === "learn") {
+                endpoint = "/learn/recommendations";
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        question: inputText
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    result.innerText =
+                        data.error || data.detail || "Something went wrong.";
+                    return;
+                }
+
+                result.className = "result";
+                if (task === "explain") {
+                    result.innerText = data.explanation;
+                } else if (task === "qa") {
+                    result.innerText = data.answer;
+                } else if (task === "quiz") {
+                    if (Array.isArray(data.quiz)) {
+                        result.className = "result quiz-container";
+                        result.innerHTML = `<h3 style="margin-top:0;margin-bottom:16px;">Quiz:</h3>` +
+                            data.quiz.map((q, i) => {
+                                const optionsHtml = (q.options || []).map((opt) => {
+                                    const safeOpt = escapeHtml(opt);
+                                    return `<div class="quiz-option">
+                                        <label>
+                                            <input type="radio" name="quiz_q_${i}" value="${safeOpt}">
+                                            <span>${safeOpt}</span>
+                                        </label>
+                                    </div>`;
+                                }).join('');
+                                const safeAns = escapeHtml(q.answer || "");
+                                return `<div class="quiz-item">
+                                    <h4>Q${i + 1}: ${escapeHtml(q.question)}</h4>
+                                    ${optionsHtml}
+                                    <button type="button" class="check-btn" onclick="checkAnswer(${i}, '${safeAns.replace(/'/g, "\\'")}')">Check Answer</button>
+                                    <div id="feedback_${i}" class="quiz-feedback"></div>
+                                </div>`;
+                            }).join('');
+                    } else if (data.quiz && data.quiz.error) {
+                        result.innerText = "Notice: " + data.quiz.error + (data.quiz.raw_response ? "\n\nRaw output:\n" + data.quiz.raw_response : "");
+                    } else {
+                        result.innerText = JSON.stringify(data.quiz, null, 2);
+                    }
+                } else if (task === "summarize") {
+                    result.innerText = data.summary;
+                } else if (task === "learn") {
+                    result.innerText = data.recommendations;
+                }
+            } catch (error) {
+                result.innerText =
+                    "Unable to connect to the EduGenie server.";
+            } finally {
+                loading.style.display = "none";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.innerText = text || "";
+            return div.innerHTML;
+        }
+
+        function checkAnswer(index, correctAnswer) {
+            const selected = document.querySelector(`input[name="quiz_q_${index}"]:checked`);
+            const feedback = document.getElementById(`feedback_${index}`);
+            if (!selected) {
+                feedback.innerHTML = '<span style="color:#d97706;">⚠️ Please select an option first.</span>';
+                return;
+            }
+
+            const userVal = selected.value.trim().toLowerCase();
+            const correctVal = correctAnswer.trim().toLowerCase();
+
+            // Match full text or option prefix
+            const isCorrect = userVal === correctVal || 
+                              userVal.endsWith(correctVal) || 
+                              correctVal.endsWith(userVal);
+
+            if (isCorrect) {
+                feedback.innerHTML = '<span class="correct">✅ Correct!</span>';
+            } else {
+                feedback.innerHTML = `<span class="incorrect">❌ Incorrect. Correct answer: ${escapeHtml(correctAnswer)}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
