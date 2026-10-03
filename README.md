@@ -4,7 +4,6 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://www.python.org/)
 [![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=google)](https://ai.google.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 **EduGenie** is a lightweight, responsive, and full-stack generative AI educational assistant. Designed for learners, students, and educators of all academic levels, EduGenie simplifies learning by transforming educational concepts and materials into smart, concise, and interactive experiences powered by Google Gemini.
 
