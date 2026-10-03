@@ -200,6 +200,3 @@ python list_models.py
 - **Structured Error Responses**: Global exception handlers return clean JSON error payloads (`{"error": "..."}`) to prevent unhandled 500 server crashes.
 
 ---
-
-## 📄 License
-This project is licensed under the [MIT License](LICENSE).
